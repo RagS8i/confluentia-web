@@ -1,0 +1,323 @@
+{
+  "config_id": "careflow-demo-triage",
+  "version": "0.1.0-demo",
+  "status": "ILLUSTRATIVE_DEMO_ONLY_NOT_CLINICALLY_APPROVED",
+  "description": "Demonstration-only workflow rules for synthetic data. These thresholds are illustrative and must not be presented as an established clinical triage protocol. Qualified clinicians must review and approve any rule set before use with real patients.",
+  "clinical_review_required": true,
+  "review_deadlines_minutes": {
+    "EMERGENCY": 0,
+    "PRIORITY_REVIEW": 30,
+    "ROUTINE_REVIEW": 240,
+    "UNASSESSED": 60
+  },
+  "outcomes": {
+    "EMERGENCY": {
+      "rank": 0,
+      "label": "Potential emergency requiring immediate staff attention",
+      "is_clinical_diagnosis": false
+    },
+    "PRIORITY_REVIEW": {
+      "rank": 1,
+      "label": "Priority clinician review",
+      "is_clinical_diagnosis": false
+    },
+    "ROUTINE_REVIEW": {
+      "rank": 3,
+      "label": "Routine review",
+      "is_clinical_diagnosis": false
+    },
+    "UNASSESSED": {
+      "rank": 2,
+      "label": "Unassessed due to insufficient or unreliable information",
+      "is_clinical_diagnosis": false
+    }
+  },
+  "rules": [
+    {
+      "id": "DEMO-EMERGENCY-01",
+      "version": "0.1.0-demo",
+      "outcome": "EMERGENCY",
+      "label": "Chest pain with breathlessness",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["chest pain"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          },
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["shortness of breath"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: co-occurring chest pain and breathlessness should be assessed immediately by clinical staff. This is a workflow prompt, not a diagnosis."
+    },
+    {
+      "id": "DEMO-EMERGENCY-02",
+      "version": "0.1.0-demo",
+      "outcome": "EMERGENCY",
+      "label": "Low oxygen saturation",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "vital_sign",
+            "canonical_any": ["spo2"],
+            "status_any": ["present"],
+            "unit_any": ["%"],
+            "value_lt": 94,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented SpO2 below 94% requires immediate staff attention. Threshold is a demonstration value, not an approved protocol."
+    },
+    {
+      "id": "DEMO-EMERGENCY-03",
+      "version": "0.1.0-demo",
+      "outcome": "EMERGENCY",
+      "label": "Reported loss of consciousness",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["loss of consciousness"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: reported loss of consciousness is routed for immediate staff attention."
+    },
+    {
+      "id": "DEMO-EMERGENCY-04",
+      "version": "0.1.0-demo",
+      "outcome": "EMERGENCY",
+      "label": "Reported seizure",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["seizure"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a reported seizure is routed for immediate staff attention."
+    },
+    {
+      "id": "DEMO-EMERGENCY-05",
+      "version": "0.1.0-demo",
+      "outcome": "EMERGENCY",
+      "label": "Bleeding with dizziness",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["bleeding"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          },
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["dizziness"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: bleeding accompanied by dizziness is routed for immediate staff attention."
+    },
+    {
+      "id": "DEMO-PRIORITY-01",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Chest pain reported",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["chest pain"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: chest pain is placed in the priority review queue for clinician assessment."
+    },
+    {
+      "id": "DEMO-PRIORITY-02",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Breathlessness reported",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["shortness of breath"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: breathlessness is placed in the priority review queue."
+    },
+    {
+      "id": "DEMO-PRIORITY-03",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "High temperature (Celsius)",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "vital_sign",
+            "canonical_any": ["temperature"],
+            "status_any": ["present"],
+            "unit_any": ["C", "°C"],
+            "value_gte": 39,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented temperature of at least 39 C is routed to priority review. This is not a validated threshold."
+    },
+    {
+      "id": "DEMO-PRIORITY-04",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "High temperature (Fahrenheit)",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "vital_sign",
+            "canonical_any": ["temperature"],
+            "status_any": ["present"],
+            "unit_any": ["F", "°F"],
+            "value_gte": 102.2,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented temperature of at least 102.2 F is routed to priority review. This is not a validated threshold."
+    },
+    {
+      "id": "DEMO-PRIORITY-05",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Very high systolic blood pressure",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "vital_sign",
+            "canonical_any": ["blood pressure"],
+            "status_any": ["present"],
+            "systolic_gte": 180,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented systolic blood pressure of at least 180 mmHg is routed to priority review. This is not a validated threshold."
+    },
+    {
+      "id": "DEMO-PRIORITY-06",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Very high diastolic blood pressure",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "vital_sign",
+            "canonical_any": ["blood pressure"],
+            "status_any": ["present"],
+            "diastolic_gte": 120,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented diastolic blood pressure of at least 120 mmHg is routed to priority review. This is not a validated threshold."
+    },
+    {
+      "id": "DEMO-PRIORITY-07",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "High blood glucose",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "measurement",
+            "canonical_any": ["blood glucose"],
+            "status_any": ["present"],
+            "unit_any": ["mg/dL", "mg/dl"],
+            "value_gte": 300,
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: a documented blood glucose of at least 300 mg/dL is routed to priority review. This is not a validated threshold."
+    },
+    {
+      "id": "DEMO-PRIORITY-08",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Vomiting with abdominal pain",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["vomiting"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          },
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["abdominal pain"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: vomiting with abdominal pain is routed to priority review."
+    },
+    {
+      "id": "DEMO-PRIORITY-09",
+      "version": "0.1.0-demo",
+      "outcome": "PRIORITY_REVIEW",
+      "label": "Fever with rash",
+      "minimum_confidence": 0.6,
+      "when": {
+        "all": [
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["fever"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          },
+          {
+            "fact_type": "symptom",
+            "canonical_any": ["rash"],
+            "status_any": ["present"],
+            "min_confidence": 0.6
+          }
+        ]
+      },
+      "explanation": "Illustrative demo rule: fever with rash is routed to priority review."
+    }
+  ]
+}

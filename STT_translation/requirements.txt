@@ -1,0 +1,12 @@
+# Careflow STT service dependencies.
+fastapi>=0.111,<0.152
+uvicorn[standard]>=0.30,<0.55
+python-multipart==0.0.32
+python-dotenv>=1.0,<2
+pydantic>=2.12,<3
+
+# Sarvam speech-to-text / translation
+sarvamai==0.1.37
+
+# Audio decoding, silence detection, and WAV export (requires ffmpeg)
+pydub==0.25.1

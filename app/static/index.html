@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d2533" />
+  <title>CareFlow AI — Clinical Review Workstation</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="apple-touch-icon" href="/static/logo.png" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/static/logo.png" alt="CareFlow AI" class="brand-logo" onerror="this.onerror=null;this.src='/logo.png';" />
+      <div>
+        <h1>CareFlow <span>AI</span></h1>
+        <p>Human-in-the-loop intake, communication and review</p>
+      </div>
+    </div>
+    <div class="identity">
+      <input id="user-id" aria-label="User ID" placeholder="User ID" />
+      <select id="role" aria-label="Role">
+        <option value="clinician">Clinician</option>
+        <option value="doctor">Doctor</option>
+        <option value="nurse">Nurse</option>
+        <option value="physician">Physician</option>
+        <option value="physician_assistant">Physician assistant</option>
+        <option value="nurse_practitioner">Nurse practitioner</option>
+        <option value="intake">Intake</option>
+        <option value="patient">Patient</option>
+        <option value="admin">Admin</option>
+      </select>
+      <input id="patient-id" aria-label="Patient ID" placeholder="Patient ID" />
+      <button id="save-identity" class="btn secondary">Set identity</button>
+    </div>
+    <div class="api-bridge">
+      <input id="api-url" aria-label="Backend API URL" placeholder="Backend URL (leave empty if local)" title="Leave empty for local /api or enter your port-forwarded URL (e.g. https://...ngrok-free.app)" />
+      <button id="save-api-url" class="btn secondary small" title="Connect to backend">Connect</button>
+      <span id="api-status-pill" class="badge" title="Connection status">checking...</span>
+    </div>
+  </header>
+
+  <div class="disclaimer">
+    <strong>Workflow support only.</strong> CareFlow AI does not diagnose, prescribe, or clear patients.
+    Demonstration rules are illustrative, not clinically approved. Urgent escalation never waits for messages or follow-up answers.
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel queue-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Review queue</h2>
+            <p class="eyebrow" id="queue-count">Priority categories are never auto-downgraded</p>
+          </div>
+          <div class="row compact">
+            <button id="refresh-queue" class="icon-btn" title="Refresh queue">↻</button>
+            <button id="new-case" class="btn small">New case</button>
+          </div>
+        </div>
+        <div id="queue" class="queue"></div>
+      </section>
+
+      <section class="panel intelligence-panel staff-only">
+        <div class="panel-head">
+          <div>
+            <h2>Queue intelligence</h2>
+            <p class="eyebrow">Explainable, human-controlled prioritization</p>
+          </div>
+          <button id="refresh-intel" class="icon-btn" title="Refresh intelligence">↻</button>
+        </div>
+        <div id="bottlenecks" class="metrics"></div>
+        <details class="staffing-details">
+          <summary>Staffing &amp; wait estimate inputs</summary>
+          <div class="staffing-grid">
+            <label>Clinicians <input id="staff-clinicians" type="number" min="0" value="0" /></label>
+            <label>Avg review min <input id="staff-average" type="number" min="0" step="0.5" placeholder="unavailable" /></label>
+            <label>Sample size <input id="staff-sample" type="number" min="0" value="0" /></label>
+            <button id="save-staffing" class="btn secondary small">Update</button>
+          </div>
+          <p class="hint">A wait estimate appears only with clinicians, an average review time, and at least 3 observations. It is never a queue position.</p>
+        </details>
+        <div id="recommendations" class="recommendations"></div>
+      </section>
+
+      <section class="panel intake-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Case intake</p>
+            <h2>Direct source intake</h2>
+          </div>
+        </div>
+
+        <div id="intake-gate" class="intake-gate">
+          <p class="intake-gate-msg">Select a case and grant consent to enable intake.</p>
+        </div>
+
+        <div id="intake-body" class="intake-body">
+          <div class="intake-tabs">
+            <button id="tab-btn-audio" class="intake-tab active" data-tab="audio">Audio</button>
+            <button id="tab-btn-document" class="intake-tab" data-tab="document">Document</button>
+            <button id="tab-btn-message" class="intake-tab" data-tab="message">Message</button>
+          </div>
+
+          <!-- Audio Tab -->
+          <div id="tab-audio" class="intake-tab-content">
+            <div class="intake-subflow">
+              <label>Record audio in browser</label>
+              <div class="recorder-controls">
+                <button id="record-btn" class="btn secondary small">● Record</button>
+                <button id="stop-record-btn" class="btn danger small" disabled>Stop</button>
+                <span id="record-timer" class="record-timer" hidden>00:00</span>
+              </div>
+              <audio id="record-preview" controls class="audio-preview" hidden></audio>
+            </div>
+
+            <div class="intake-subflow">
+              <label>Or upload audio file</label>
+              <input id="audio-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" />
+              <p class="hint">Supported: WAV, MP3, M4A, OGG, FLAC, WebM.</p>
+            </div>
+
+            <div class="intake-options">
+              <label class="checkbox-label">
+                <input id="audio-auto-process" type="checkbox" checked />
+                <span>Auto-run pipeline</span>
+              </label>
+              <label>Target lang:
+                <select id="audio-target-lang">
+                  <option value="en-IN">English (en-IN)</option>
+                  <option value="bn-IN">Bengali (bn-IN)</option>
+                  <option value="gu-IN">Gujarati (gu-IN)</option>
+                  <option value="hi-IN">Hindi (hi-IN)</option>
+                  <option value="kn-IN">Kannada (kn-IN)</option>
+                  <option value="ml-IN">Malayalam (ml-IN)</option>
+                  <option value="mr-IN">Marathi (mr-IN)</option>
+                  <option value="od-IN">Odia (od-IN)</option>
+                  <option value="pa-IN">Punjabi (pa-IN)</option>
+                  <option value="ta-IN">Tamil (ta-IN)</option>
+                  <option value="te-IN">Telugu (te-IN)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="row">
+              <button id="submit-audio-btn" class="btn small">Ingest Audio</button>
+            </div>
+          </div>
+
+          <!-- Document Tab -->
+          <div id="tab-document" class="intake-tab-content" hidden>
+            <div class="intake-subflow">
+              <label>Select medical report or image</label>
+              <input id="doc-file" type="file" accept="application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp,.tiff" />
+              <p class="hint">Supported: PDF, PNG, JPG, JPEG, WEBP, TIFF.</p>
+            </div>
+
+            <div class="intake-options">
+              <label class="checkbox-label">
+                <input id="doc-auto-process" type="checkbox" checked />
+                <span>Auto-run pipeline</span>
+              </label>
+            </div>
+
+            <div class="row">
+              <button id="submit-doc-btn" class="btn small">Ingest Document</button>
+            </div>
+          </div>
+
+          <!-- Message Tab -->
+          <div id="tab-message" class="intake-tab-content" hidden>
+            <div class="intake-subflow">
+              <label>Typed patient message</label>
+              <textarea id="typed-message-text" rows="4" placeholder="Patient symptoms, timeline, or updates in their own words..."></textarea>
+              <div class="row compact">
+                <label>Language:
+                  <select id="typed-message-lang">
+                    <option value="en">English</option>
+                    <option value="hi">हिन्दी</option>
+                    <option value="hinglish">Hinglish</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div class="row">
+              <button id="submit-message-btn" class="btn small">Ingest Message</button>
+            </div>
+          </div>
+
+          <!-- Intake Job Progress / Status -->
+          <div id="intake-job-panel" class="intake-job-panel" hidden>
+            <div class="intake-job-header">
+              <span id="intake-job-stage" class="badge PRIORITY_REVIEW">queued</span>
+              <span id="intake-job-timer" class="small-text muted">0s</span>
+            </div>
+            <p id="intake-job-msg" class="hint">Processing intake request...</p>
+            <div id="intake-cpu-warning" class="intake-cpu-warning" hidden>
+              Sarvam Vision is reading the document; extraction may take a few minutes.
+            </div>
+          </div>
+
+          <!-- Collapsed Advanced JSON/API section for developers -->
+          <details class="advanced-intake staff-only">
+            <summary>Advanced JSON / Integration APIs</summary>
+            <p class="hint">Direct JSON ingestion endpoints: /sources/stt, /sources/ocr, /sources/message, /uploads.</p>
+            <div class="row">
+              <button class="btn secondary small" data-ingest="stt">STT JSON</button>
+              <button class="btn secondary small" data-ingest="ocr">OCR JSON</button>
+              <button class="btn secondary small" data-ingest="message">Patient message</button>
+            </div>
+            <textarea id="ingest-json" rows="4" spellcheck="false" placeholder='{"transcript_id":"t1","language":"en","segments":[{"text":"...","start":0,"end":2.2}]}'></textarea>
+            <div class="row">
+              <input id="upload-file" type="file" />
+              <button id="upload-btn" class="btn secondary small">Upload original</button>
+            </div>
+          </details>
+
+          <p id="ingest-status" class="hint"></p>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section id="welcome" class="welcome">
+        <div class="welcome-copy">
+          <p class="eyebrow">Care coordination workspace</p>
+          <h2>One defensible view of every case</h2>
+          <p class="lede">Create a synthetic case, grant consent, add source material, and run the pipeline. Evidence stays attached to every claim, warning, message and follow-up.</p>
+          <div class="welcome-grid">
+            <article><span>01</span><h3>Evidence first</h3><p>Original wording is preserved. Missing information is never treated as a negative finding.</p></article>
+            <article><span>02</span><h3>Human control</h3><p>The deterministic engine proposes workflow status. A clinician makes the final decision.</p></article>
+            <article><span>03</span><h3>Safe outreach</h3><p>Patient messages come from curated templates and require staff approval before delivery.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="case-view" hidden>
+        <div class="case-header panel">
+          <div>
+            <p class="eyebrow">Case review</p>
+            <h2 id="case-title">Case</h2>
+            <p id="case-meta" class="hint"></p>
+          </div>
+          <div class="row">
+            <button id="copy-case-link" class="btn secondary small" title="Copy direct link to this case">📋 Copy Link</button>
+            <button id="refresh-case" class="btn secondary small">Refresh</button>
+            <button id="assign-btn" class="btn secondary small staff-only">Assign</button>
+            <button id="consent-btn" class="btn secondary small">Grant consent</button>
+            <button id="process-btn" class="btn small staff-only">Run pipeline</button>
+            <button id="withdraw-btn" class="btn danger small">Withdraw &amp; delete</button>
+          </div>
+        </div>
+
+        <div class="status-strip staff-only" id="status-strip"></div>
+
+        <section id="patient-view" class="patient-view" hidden>
+          <div class="status-strip" id="patient-status-strip"></div>
+
+          <section class="panel patient-card-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">For you</p>
+                <h2>Your care summary</h2>
+                <p class="hint">A plain-language summary of the information you shared, with the language you choose. This is not a diagnosis.</p>
+              </div>
+              <div class="row compact patient-controls">
+                <label>Language
+                  <select id="patient-language" aria-label="Summary language">
+                    <option value="en-IN">English</option>
+                    <option value="bn-IN">বাংলা (Bengali)</option>
+                    <option value="gu-IN">ગુજરાતી (Gujarati)</option>
+                    <option value="hi-IN">हिन्दी (Hindi)</option>
+                    <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml-IN">മലയാളം (Malayalam)</option>
+                    <option value="mr-IN">मराठी (Marathi)</option>
+                    <option value="od-IN">ଓଡ଼ିଆ (Odia)</option>
+                    <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
+                    <option value="ta-IN">தமிழ் (Tamil)</option>
+                    <option value="te-IN">తెలుగు (Telugu)</option>
+                  </select>
+                </label>
+                <button id="patient-card-load" class="btn secondary small">Show summary</button>
+                <button id="patient-card-listen" class="btn small">🔊 Listen</button>
+              </div>
+            </div>
+            <div class="row compact patient-detect">
+              <label>Not sure of the language? <input id="patient-detect-file" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm" /></label>
+              <button id="patient-detect-language" class="btn secondary small">Detect language from voice</button>
+            </div>
+            <p id="patient-card-status" class="hint"></p>
+            <div id="patient-card-text" class="patient-card-text"></div>
+            <audio id="patient-card-audio" controls hidden></audio>
+          </section>
+
+          <section class="panel patient-followup-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Your turn</p>
+                <h2>Follow-up questions</h2>
+                <p class="hint">Questions from your care team, shown in your chosen language. Answer in your own words, or record a voice answer in any supported language.</p>
+              </div>
+            </div>
+            <div id="patient-followups" class="coordination-list"></div>
+            <audio id="patient-followup-audio" controls hidden></audio>
+          </section>
+
+          <section class="panel">
+            <h2>Messages from your care team</h2>
+            <div id="patient-communications" class="coordination-list"></div>
+          </section>
+        </section>
+
+        <section class="panel staff-only" id="urgency-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Advisory urgency · 0 to 100</p>
+              <h2>Patient urgency <span id="urgency-score" class="badge">—</span></h2>
+              <p id="urgency-meta" class="hint"></p>
+            </div>
+          </div>
+          <p id="urgency-rationale" class="hint"></p>
+          <div class="row" id="urgency-edit-row">
+            <input id="urgency-input" type="number" min="0" max="100" step="1" placeholder="0–100" />
+            <input id="urgency-reason" placeholder="Reason for change (required)" />
+            <button id="save-urgency" class="btn small">Update urgency</button>
+          </div>
+          <p class="hint">The SLM score is advisory only. It never changes the workflow category, dismisses warnings, or replaces clinician review. Nurses, doctors and other clinical staff can edit it with an audited reason.</p>
+        </section>
+
+        <section id="escalation-panel" class="panel escalation-panel staff-only" hidden>
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Urgent escalation outbox</p>
+              <h2>Immediate human review required</h2>
+            </div>
+          </div>
+          <div id="escalations"></div>
+        </section>
+
+        <section class="panel coordination-panel staff-only">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Feature A · Patient queue communication</p>
+              <h2>Communication assistant</h2>
+              <p class="hint">Curated templates only. Draft → staff approval → delivery. No diagnosis, wait guarantee, or clearance is generated.</p>
+            </div>
+            <div class="row compact">
+              <select id="communication-intent" aria-label="Message intent">
+                <option value="status_update">Status update</option>
+                <option value="missing_information">Missing information</option>
+                <option value="document_request">Document request</option>
+                <option value="wait_update">Operational wait update</option>
+                <option value="urgent_review">Urgent review</option>
+              </select>
+              <select id="communication-language" aria-label="Message language">
+                <option value="en">English</option>
+                <option value="hi">हिन्दी</option>
+                <option value="hinglish">Hinglish</option>
+              </select>
+              <button id="draft-message" class="btn small">Draft</button>
+            </div>
+          </div>
+          <div id="communications" class="coordination-list"></div>
+        </section>
+
+        <div class="columns staff-only">
+          <div class="col">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Feature C · Adaptive follow-up</p>
+                  <h2>Follow-up questions</h2>
+                </div>
+                <button id="sync-followups" class="btn secondary small">Sync from summary</button>
+              </div>
+              <div id="followups" class="coordination-list"></div>
+              <div id="followup-answers" class="answer-list"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Clinical summary <span class="soft">evidence-linked</span></h2>
+              <div id="summary"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Symptom timeline</h2>
+              <div id="timeline"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Candidate contradictions</h2>
+              <div id="discrepancies"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Raw Ingestion Materials</p>
+                  <h2>Ingested Sources &amp; Transcripts <span id="sources-count" class="soft"></span></h2>
+                </div>
+              </div>
+              <div id="sources-list"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Structured facts &amp; source evidence</h2>
+              <div id="facts"></div>
+            </section>
+          </div>
+
+          <div class="col">
+            <section class="panel">
+              <h2>Warning signals</h2>
+              <div id="warnings"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Missing information &amp; suggested questions</h2>
+              <div id="gaps"></div>
+              <div id="questions"></div>
+            </section>
+
+            <section class="panel">
+              <h2>Clinician note</h2>
+              <div id="note-status" class="hint"></div>
+              <textarea id="note-text" rows="12"></textarea>
+              <div class="row">
+                <button id="save-note" class="btn secondary small">Save draft</button>
+                <button id="approve-note" class="btn small">Approve note</button>
+              </div>
+              <div class="override">
+                <h3>Workflow status override</h3>
+                <p class="hint">Overrides preserve the original status, reviewer, timestamp and reason. Explicit confirmation is required.</p>
+                <div class="row">
+                  <select id="override-status">
+                    <option value="EMERGENCY">EMERGENCY</option>
+                    <option value="PRIORITY_REVIEW">PRIORITY_REVIEW</option>
+                    <option value="ROUTINE_REVIEW">ROUTINE_REVIEW</option>
+                    <option value="UNASSESSED">UNASSESSED</option>
+                  </select>
+                  <input id="override-reason" placeholder="Documented reason (required)" />
+                  <button id="override-btn" class="btn danger small">Override</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <h2>Audit trail</h2>
+              <div id="audit" class="audit"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="row space-between">
+        <h2 id="modal-title">Evidence</h2>
+        <button id="modal-close" class="btn secondary small">Close</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
