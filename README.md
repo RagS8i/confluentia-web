@@ -142,6 +142,18 @@ You can also preconfigure a deployment with a query parameter:
 https://your-frontend.example.com/?api=https://your-backend.example.com
 ```
 
+### Frontend on GitHub Pages
+
+A GitHub Actions workflow (`.github/workflows/pages.yml`) publishes the static client to GitHub Pages on every push to `main`. The site is assembled so the page lives at the repository root and its assets live under `static/`, matching the `<base href="./static/">` used by `index.html`.
+
+The deployed demo URL is:
+
+```text
+https://rags8i.github.io/confluentia-web/
+```
+
+Enter the backend URL in the web app before using clinical features. GitHub Pages only hosts the static client; it does not run the FastAPI backend or hold any patient data.
+
 ### CORS
 
 The backend currently allows cross-origin browser requests. If you deploy publicly, restrict `allow_origins` in `app/main.py` to your frontend origin and enable the `api_key` authentication mode instead of trusted development headers.
